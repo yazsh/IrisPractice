@@ -1,7 +1,8 @@
 import pandas as pd
-
 import tensorflow as tf
 from helperFunctions import create_layer, cost_compute
+import keras as ks
+
 input_features = 4
 n_hidden_units1 = 10
 n_hidden_units2 = 14
@@ -24,13 +25,15 @@ biases = dict(
             b4=tf.Variable(tf.zeros([n_hidden_units4]))
             )
 
-train = pd.read_csv("/Users/yazen/Desktop/datasets/iris_training.csv")
-test = pd.read_csv("/Users/yazen/Desktop/datasets/iris_test.csv")
+train = pd.read_csv("/Users/yazen/Desktop/datasets/iris/iris_training.csv")
+test = pd.read_csv("/Users/yazen/Desktop/datasets/iris/iris_test.csv")
 
 train.columns = ['sepal length', 'sepal width', 'petal length', 'petal width', 'species']
 test.columns = ['sepal length', 'sepal width', 'petal length', 'petal width', 'species']
 
 train_features = train.drop('species', axis=1)
+feat = train_features.columns
+
 test_features = test.drop('species', axis=1)
 train_features
 
@@ -49,12 +52,22 @@ layer = create_layer(x, weights['w1'], biases['b1'], tf.nn.relu)
 layer = create_layer(layer, weights['w2'], biases['b2'], tf.nn.relu)
 layer = create_layer(layer, weights['w3'], biases['b3'], tf.nn.relu)
 Z4 = create_layer(layer, weights['w4'], biases['b4'])
-cost = cost_compute(Z4, y)
+
+cost = cost_compute(Z4, y,weights)
 optimizer = tf.train.AdamOptimizer(learning_rate=rate).minimize(cost)
+
+def serving_input_receiver_fn():
+    serialized_tf_example = tf.placeholder(dtype=tf.string,
+                                           shape=[1],
+                                           name='input_example_tensor')
+    feature_spec = {'layer_1_input': tf.FixedLenFeature(shape=[4], dtype=tf.float32)}
+    receiver_tensors = {'layer_1_input': serialized_tf_example}
+    features = tf.parse_example(serialized_tf_example, feature_spec)
+    return tf.estimator.export.ServingInputReceiver(serialized_tf_example, receiver_tensors)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    for iteration in range(1,500):
+    for iteration in range(1,2000):
         _, c = sess.run([optimizer, cost], feed_dict={x: train_features, y: train_labels})
         print("Iteration " + str(iteration) + " cost: " + str(c))
 
@@ -64,4 +77,29 @@ with tf.Session() as sess:
     print(accuracy.eval({x: train_features, y: train_labels}))
     print(accuracy.eval({x: test_features, y: test_labels}))
 
+    tf.estimator.Estimator.export_savedmodel(export_dir_base="/Users/yazen/Desktop/mlprojects/Iris",serving_input_receiver_fn= serving_input_receiver_fn)
 
+
+    # Build 2 hidden layer DNN with 10, 10 units respectively.
+    classifier = accuracy.Estimator(
+        model_fn=accuracy,
+        params={
+            'feature_columns': feat,
+            # Two hidden layers of 10 nodes each.
+            'hidden_units': [10, 10],
+            # The model must choose between 3 classes.
+            'n_classes': 3,
+        })
+
+
+
+# model = ks.models.Sequential()
+#
+# model.add(ks.layers.Dense(10, input_shape=(input_features,), activation='relu', kernel_regularizer=ks.regularizers.l2()))
+# model.add(ks.layers.Dense(14, activation='relu', kernel_regularizer=ks.regularizers.l2()))
+# model.add(ks.layers.Dense(12, activation='relu', kernel_regularizer=ks.regularizers.l2()))
+# model.add(ks.layers.Dense(3, activation='softmax'))
+#
+# model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# model.fit(train_features.as_matrix(), train_labels, verbose=1, epochs=200)
+# print(model.evaluate(test_features.as_matrix(), test_labels))

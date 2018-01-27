@@ -5,6 +5,9 @@
     <orderEntry type="jdk" jdkName="Python 3.6.2 (/Library/Frameworks/Python.framework/Versions/3.6/bin/python3.6)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="parkisonsPrediction" />
+    <orderEntry type="module" module-name="HouseCostPrediction" />
+    <orderEntry type="module" module-name="HouseCostPrediction" />
+    <orderEntry type="module" module-name="Titanic" />
   </component>
   <component name="TestRunnerService">
     <option name="PROJECT_TEST_RUNNER" value="Unittests" />
